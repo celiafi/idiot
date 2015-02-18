@@ -23,25 +23,25 @@ import java.util.zip.ZipOutputStream;
 
 public class DefaultEventProcessor implements EventProcessor {
 
+	private static final String ALREADY_ENCRYPTED_EXTENSION = "axx";
 	Idiot autoEncryptor;
 	Map<Path, Path> directories;
-	
+
 	public DefaultEventProcessor(Idiot autoEncryptor) {
 		this.autoEncryptor = autoEncryptor;
 		this.directories = new HashMap<Path, Path>();
 	}
-	
+
 	public void initialize() {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	public void processEvent(WatchKey key, WatchEvent<?> event) {
 		Kind<?> kind = event.kind();
 
 		if (kind == OVERFLOW) {
-			Idiot.LOGGER
-					.warning("Overflow error. Manual check necessary.");
+			Idiot.LOGGER.warning("Overflow error. Manual check necessary.");
 		}
 
 		if (kind == ENTRY_CREATE) {
@@ -52,8 +52,7 @@ public class DefaultEventProcessor implements EventProcessor {
 	private void processCreation(WatchKey key, WatchEvent<?> event) {
 
 		Path dir = Idiot.keys.get(key);
-		Path remote = directories
-				.get(Idiot.keys.get(key));
+		Path remote = directories.get(Idiot.keys.get(key));
 		Idiot.LOGGER.fine("Current watched directory: " + dir);
 		Idiot.LOGGER.fine("Current remote directory: " + remote);
 
@@ -77,30 +76,27 @@ public class DefaultEventProcessor implements EventProcessor {
 
 	void encryptAndMoveFile(Path pathToFile, Path remote) {
 
-		String extension = getExtensionFromPath(pathToFile);
-		if (!extension.equals("axx")) {
-			waitUntilPathIsAccessible(pathToFile);
-			if (pathIsAccessible(pathToFile)) {
-				Idiot.LOGGER
-						.fine("File " + pathToFile + " accessible.");
-				try {
-					Path encrypted = encrypt(pathToFile);
-					Idiot.LOGGER.info("Encrypted " + encrypted
-							+ " succesfully.");
-					move(encrypted, remote);
-					Idiot.LOGGER.info("Moved " + encrypted + " to "
-							+ remote + " succesfully.");
-				} catch (IOException e) {
-					Idiot
-							.logExceptionAsSevere(
-									e,
-									"IO exception when moving the file. File "
-											+ "might already exist or the remote may "
-											+ "be inaccessible or not reachable due to for example network problems.");
-					return;
-				}
-			}
+		if (matchExtension(pathToFile, ALREADY_ENCRYPTED_EXTENSION)) {
+			return;
 		}
+
+		waitUntilPathIsAccessible(pathToFile);
+		try {
+			Path encrypted = encrypt(pathToFile);
+			move(encrypted, remote);
+		} catch (IOException e) {
+			Idiot.logExceptionAsSevere(
+					e,
+					"IO exception when moving the file. File "
+							+ "might already exist or the remote may "
+							+ "be inaccessible or not reachable due to for example network problems.");
+			return;
+		}
+	}
+
+	boolean matchExtension(Path pathToFile, String extension) {
+		String fileExtension = getExtensionFromPath(pathToFile);
+		return fileExtension.equals(extension);
 	}
 
 	void waitUntilPathIsAccessible(Path path) {
@@ -109,8 +105,7 @@ public class DefaultEventProcessor implements EventProcessor {
 				Idiot.LOGGER.finest("File not accessible, sleeping.");
 				TimeUnit.MILLISECONDS.sleep(100);
 			} catch (InterruptedException e) {
-				Idiot.logExceptionAsSevere(e,
-						"Interrupted while sleeping.");
+				Idiot.logExceptionAsSevere(e, "Interrupted while sleeping.");
 			}
 		}
 	}
@@ -119,12 +114,15 @@ public class DefaultEventProcessor implements EventProcessor {
 		String fileName = path.toString();
 		File file = new File(fileName);
 		File sameFileName = new File(fileName);
-		return file.renameTo(sameFileName);
+		boolean accessible = file.renameTo(sameFileName);
+		if (accessible) {
+			Idiot.LOGGER.fine("File " + path + " is accessible.");
+		}
+		return accessible;
 	}
 
 	void zipRecursively(Path pathToFile) {
-		Idiot.LOGGER.config("File " + pathToFile
-				+ " is directory, zipping.");
+		Idiot.LOGGER.config("File " + pathToFile + " is directory, zipping.");
 
 		waitUntilPathIsAccessible(pathToFile);
 		if (pathIsAccessible(pathToFile)) {
@@ -152,8 +150,7 @@ public class DefaultEventProcessor implements EventProcessor {
 		out.close();
 		Idiot.LOGGER.fine("Deleting directory " + file);
 		if (deleteDirectory(file)) {
-			Idiot.LOGGER.config("Deleted directory " + file
-					+ " succesfully.");
+			Idiot.LOGGER.config("Deleted directory " + file + " succesfully.");
 		} else {
 			Idiot.LOGGER.config("Deleting directory " + file
 					+ " not succesful.");
@@ -175,8 +172,7 @@ public class DefaultEventProcessor implements EventProcessor {
 		return (path.delete());
 	}
 
-	private void addDirToZip(File file, ZipOutputStream out)
-			throws IOException {
+	private void addDirToZip(File file, ZipOutputStream out) throws IOException {
 		File[] files = file.listFiles();
 		byte[] tmpBuf = new byte[1024];
 
@@ -186,8 +182,7 @@ public class DefaultEventProcessor implements EventProcessor {
 				continue;
 			}
 			FileInputStream in = new FileInputStream(files[i].getAbsolutePath());
-			Idiot.LOGGER.config("Adding to zip: "
-					+ files[i].getAbsolutePath());
+			Idiot.LOGGER.config("Adding to zip: " + files[i].getAbsolutePath());
 			String relativePath = file.toURI().relativize(files[i].toURI())
 					.toString();
 			out.putNextEntry(new ZipEntry(relativePath));
@@ -201,16 +196,13 @@ public class DefaultEventProcessor implements EventProcessor {
 	}
 
 	private void move(Path file, Path newLocation) throws IOException {
-		Idiot.LOGGER.finest("Getting filename for " + file);
 		Path filename = file.getFileName();
-		Idiot.LOGGER.finest("Got filename for " + file);
-		Idiot.LOGGER.finest("Getting new location " + newLocation);
 		newLocation = Paths.get(newLocation.toString().concat("\\")
 				.concat(filename.toString()));
-		Idiot.LOGGER.finest("Got new location " + newLocation);
-		Idiot.LOGGER.config("Moving file " + filename + " to "
-				+ newLocation);
+		Idiot.LOGGER.config("Moving file " + filename + " to " + newLocation);
 		Files.move(file, newLocation);
+		Idiot.LOGGER.info("Moved " + file + " to " + newLocation
+				+ " succesfully.");
 	}
 
 	private String getExtensionFromPath(Path path) {
@@ -226,7 +218,9 @@ public class DefaultEventProcessor implements EventProcessor {
 
 		String commandString = createEncryptionStringForPath(pathToFile);
 		if (executeExternalCommand(commandString)) {
-			return getEncryptedFilePath(pathToFile);
+			Path encrypted = getEncryptedFilePath(pathToFile);
+			Idiot.LOGGER.info("Encrypted " + encrypted + " succesfully.");
+			return encrypted;
 		} else {
 			Idiot.LOGGER.severe("Encryption of file " + pathToFile
 					+ " not succesful.");
@@ -245,8 +239,7 @@ public class DefaultEventProcessor implements EventProcessor {
 		return encryptionString;
 	}
 
-	private boolean executeExternalCommand(String command)
-			throws IOException {
+	private boolean executeExternalCommand(String command) throws IOException {
 		Process process;
 
 		process = Runtime.getRuntime().exec(command);

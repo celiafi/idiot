@@ -1,5 +1,4 @@
 import java.nio.file.*;
-import java.io.File;
 import java.io.IOException;
 
 import static java.nio.file.StandardWatchEventKinds.*;
@@ -139,19 +138,22 @@ public class Idiot {
 
 			processEvents(key);
 
-			// reset key and remove from set if directory no longer accessible
 			boolean valid = key.reset();
 			if (!valid) {
-				LOGGER.severe("Directory key " + key
-						+ " is no longer accessible. Removing from keys.");
-				keys.remove(key);
-
+				removeKey(key);
 				if (keys.isEmpty()) {
 					LOGGER.severe("All directories are inaccessible. Halting.");
 					break;
 				}
 			}
+			
 		}
+	}
+
+	private void removeKey(WatchKey key) {
+		LOGGER.severe("Directory key " + key
+				+ " is no longer accessible. Removing from keys.");
+		keys.remove(key);
 	}
 
 	static void logExceptionAsSevere(Exception e, String message) {
