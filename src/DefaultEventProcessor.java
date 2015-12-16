@@ -250,6 +250,7 @@ public class DefaultEventProcessor implements EventProcessor {
 		while ((nextLine = bReader.readLine()) != null) {
 			Idiot.LOGGER.config("Process output: " + nextLine);
 		}
+		// TODO: exitValue initialized to 0 by default?
 		int exitValue = process.exitValue();
 		Idiot.LOGGER.config("Process exited with value: " + exitValue);
 		if (exitValue == 0) {

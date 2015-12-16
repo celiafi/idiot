@@ -1,4 +1,5 @@
 import java.nio.file.*;
+import java.nio.file.WatchEvent.Kind;
 import java.io.IOException;
 
 import static java.nio.file.StandardWatchEventKinds.*;
@@ -34,16 +35,29 @@ public class Idiot {
 		initLogger();
 
 		this.eventProcessors = new ArrayList<EventProcessor>();
-		eventProcessors.add(new DefaultEventProcessor(this));
 
-		this.logLevel = Level.parse(config.getProperty("logLevel"));
+		// FIXME: finish GEP
+		String mode = getConfig().getProperty("mode");
+
+		switch (mode) {
+		case "encrypt":
+			eventProcessors.add(new DefaultEventProcessor(this));
+			break;
+		case "generic":
+			eventProcessors.add(new GenericEventProcessor(this));
+			break;
+		default:
+			break;
+		}
+
+		this.logLevel = Level.parse(getConfig().getProperty("logLevel"));
 		LOGGER.setLevel(logLevel);
 		LOGGER.info("Log level " + logLevel);
 
 		this.watcher = FileSystems.getDefault().newWatchService();
 		keys = new HashMap<WatchKey, Path>();
 
-		passphrase = config.getProperty("passphrase");
+		passphrase = getConfig().getProperty("passphrase");
 
 		register();
 		initEventProcessors();
@@ -51,7 +65,7 @@ public class Idiot {
 
 	private void initLogger() {
 		try {
-			fh = new FileHandler(config.getProperty("logLocation"));
+			fh = new FileHandler(getConfig().getProperty("logLocation"));
 			LOGGER.addHandler(fh);
 			formatter = new SimpleFormatter();
 			fh.setFormatter(formatter);
@@ -68,11 +82,9 @@ public class Idiot {
 		this.config = new Properties();
 		InputStream in;
 
-		// TODO test if external properties overrides internal defaults w/ same
-		// file name
 		in = this.getClass().getResourceAsStream("idiot.properties");
 
-		config.load(in);
+		getConfig().load(in);
 		in.close();
 	}
 
@@ -82,24 +94,26 @@ public class Idiot {
 		}
 	}
 
-	// TODO this is ugly, find a generic solution for all EventProcessors.
 	private void register() throws IOException {
 
 		int i = 1;
 		String p;
-		while ((p = config.getProperty("watchDir" + i)) != null) {
+		while ((p = getConfig().getProperty("watchDir" + i)) != null) {
 			Path watchDir = Paths.get(p);
-			if (config.getProperty("remoteDir" + i) != null) {
-				Path remoteDir = Paths.get(config.getProperty("remoteDir" + i));
+			if (getConfig().getProperty("remoteDir" + i) != null) {
+				Path remoteDir = Paths.get(getConfig().getProperty("remoteDir" + i));
 				LOGGER.info("Watching " + watchDir + ", - Remote is "
 						+ remoteDir);
 
-				// TODO ughhhh
 				for (int j = 0; j < eventProcessors.size(); j++) {
 					EventProcessor ep = eventProcessors.get(j);
 					if (ep instanceof DefaultEventProcessor) {
 						DefaultEventProcessor dep = (DefaultEventProcessor) ep;
 						dep.directories.put(watchDir, remoteDir);
+					}
+					if (ep instanceof GenericEventProcessor) {
+						GenericEventProcessor gep = (GenericEventProcessor) ep;
+						gep.directories.put(watchDir, remoteDir);
 					}
 				}
 
@@ -117,14 +131,17 @@ public class Idiot {
 
 	private void registerDirectory(Path dir) throws IOException {
 		LOGGER.config("Registering directory " + dir);
-		WatchKey key = dir.register(watcher, ENTRY_CREATE, ENTRY_DELETE,
-				ENTRY_MODIFY);
+
+		@SuppressWarnings("rawtypes")
+		Kind[] events = { ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY, OVERFLOW };
+
+		WatchKey key = dir.register(watcher, events);
 		keys.put(key, dir);
 	}
 
 	private void processEvents() {
 
-		LOGGER.info("Initialization succesful!");
+		LOGGER.info("Initialization succesful.");
 		for (;;) {
 
 			WatchKey key;
@@ -146,7 +163,7 @@ public class Idiot {
 					break;
 				}
 			}
-			
+
 		}
 	}
 
@@ -194,6 +211,10 @@ public class Idiot {
 
 	public static void main(String[] args) throws IOException {
 		new Idiot().processEvents();
+	}
+
+	protected Properties getConfig() {
+		return config;
 	}
 
 }
