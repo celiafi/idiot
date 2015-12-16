@@ -48,7 +48,7 @@ public class GenericEventProcessor implements EventProcessor {
 		Idiot.LOGGER.config(event.kind().name() + ": " + pathToFile);
 
 		if (new File(pathToFile.toString()).isDirectory()) {
-			// FIXME: handle directory
+			processDir(kind, pathToFile, remote);
 		}
 
 		else {
@@ -60,6 +60,18 @@ public class GenericEventProcessor implements EventProcessor {
 	private void processFile(Kind<?> kind, Path pathToFile, Path remote) {
 
 		String commandString = createCommandStringForPath(kind, pathToFile, remote);
+		waitUntilPathIsAccessible(pathToFile);
+		try {
+			executeExternalCommand(commandString);
+		} catch (IOException e) {
+			Idiot.logExceptionAsSevere(e, "IOException.");
+			return;
+		}
+	}
+	
+	private void processDir(Kind<?> kind, Path pathToFile, Path remote) {
+
+		String commandString = createCommandStringForDir(kind, pathToFile, remote);
 		waitUntilPathIsAccessible(pathToFile);
 		try {
 			executeExternalCommand(commandString);
@@ -94,13 +106,42 @@ public class GenericEventProcessor implements EventProcessor {
 	private String createCommandStringForPath(Kind<?> kind, Path pathToFile, Path pathToRemote) {
 		String commandString = "";
 		if (kind == ENTRY_CREATE) {
-			commandString = this.idiot.getConfig().getProperty("createCommand");
+			commandString = this.idiot.getConfig().getProperty("createFileCommand");
 		}
 		else if (kind == ENTRY_MODIFY) {
-			commandString = this.idiot.getConfig().getProperty("modifyCommand");
+			commandString = this.idiot.getConfig().getProperty("modifyFileCommand");
 		}
 		else if (kind == ENTRY_DELETE) {
-			commandString = this.idiot.getConfig().getProperty("deleteCommand");
+			commandString = this.idiot.getConfig().getProperty("deleteFileCommand");
+		}
+
+		String commands[] = commandString.split("¤");
+
+		for (int i = 0; i < commands.length; i++) {
+			String s = commands[i].trim();
+			if (s.equals("FILE")) {
+				commands[i] = pathToFile.toString().replace("\\", "\\\\");
+			} else if (s.equals("REMOTE")) {
+				commands[i] = pathToRemote.toString().replace("\\", "\\\\");
+			} else {
+				commands[i] = s;
+			}
+		}
+		commandString = String.join(" ", commands);
+		Idiot.LOGGER.info("Parsed command string: " + commandString);
+		return commandString;
+	}
+	
+	private String createCommandStringForDir(Kind<?> kind, Path pathToFile, Path pathToRemote) {
+		String commandString = "";
+		if (kind == ENTRY_CREATE) {
+			commandString = this.idiot.getConfig().getProperty("createDirCommand");
+		}
+		else if (kind == ENTRY_MODIFY) {
+			commandString = this.idiot.getConfig().getProperty("modifyDirCommand");
+		}
+		else if (kind == ENTRY_DELETE) {
+			commandString = this.idiot.getConfig().getProperty("deleteDirCommand");
 		}
 
 		String commands[] = commandString.split("¤");
