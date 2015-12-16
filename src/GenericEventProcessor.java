@@ -25,12 +25,10 @@ public class GenericEventProcessor implements EventProcessor {
 	}
 
 	public void initialize() {
-		// TODO Auto-generated method stub
 	}
 
-	// FIXME: Different handling for creation, modification, deletion, based on props
 	public void processEvent(WatchKey key, WatchEvent<?> event) {
-		
+
 		Kind<?> kind = event.kind();
 
 		if (kind == OVERFLOW) {
@@ -53,16 +51,15 @@ public class GenericEventProcessor implements EventProcessor {
 			// FIXME: handle directory
 		}
 
-		// FIXME
 		else {
-			processFile(pathToFile, remote);
+			processFile(kind, pathToFile, remote);
 		}
 
 	}
 
-	private void processFile(Path pathToFile, Path remote) {
+	private void processFile(Kind<?> kind, Path pathToFile, Path remote) {
 
-		String commandString = createCommandStringForPath(pathToFile, remote);
+		String commandString = createCommandStringForPath(kind, pathToFile, remote);
 		waitUntilPathIsAccessible(pathToFile);
 		try {
 			executeExternalCommand(commandString);
@@ -94,20 +91,27 @@ public class GenericEventProcessor implements EventProcessor {
 		return accessible;
 	}
 
-	private String createCommandStringForPath(Path pathToFile, Path pathToRemote) {
-		String commandString = this.idiot.getConfig().getProperty("command");
+	private String createCommandStringForPath(Kind<?> kind, Path pathToFile, Path pathToRemote) {
+		String commandString = "";
+		if (kind == ENTRY_CREATE) {
+			commandString = this.idiot.getConfig().getProperty("createCommand");
+		}
+		else if (kind == ENTRY_MODIFY) {
+			commandString = this.idiot.getConfig().getProperty("modifyCommand");
+		}
+		else if (kind == ENTRY_DELETE) {
+			commandString = this.idiot.getConfig().getProperty("deleteCommand");
+		}
+
 		String commands[] = commandString.split("¤");
 
-		// FIXME: Something broken here
 		for (int i = 0; i < commands.length; i++) {
 			String s = commands[i].trim();
 			if (s.equals("FILE")) {
 				commands[i] = pathToFile.toString().replace("\\", "\\\\");
-			}
-			else if (s.equals("REMOTE")) {
+			} else if (s.equals("REMOTE")) {
 				commands[i] = pathToRemote.toString().replace("\\", "\\\\");
-			}
-			else {
+			} else {
 				commands[i] = s;
 			}
 		}
