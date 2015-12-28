@@ -18,15 +18,65 @@ It is possible to have multiple running instances of Idiot at the same time. How
 
 Idiot is configured in `idiot.properties` file. The configuration file is parsed on startup, not dynamically loaded. This means that changing the configuration necessitates restarting Idiot.
 
-See example file
+The properties file consists of equality-sign-separated key-value pairs. Backslash is the escape character, and as such all equality-sign literals and literal backspaces must be escaped.
 
-Possible modes:
-    - encrypt
-    - generic
-    
-MAKE SURE YOU HAVE RIGHTS TO WRITE FILES IN LOG LOCATION
+Make sure you have file writing rights in log location. Idiot will most probably get very confused if log location is inaccessible and crash.
 
-Command: ¤FILE is file name, ¤REMOTE is remote. ¤ is used for parsing command string, so if it is required in command, it may need to be escaped or it might not work at all.
+### Common properties
+
+#### logLevel
+
+The verbosity of logging. Possible values (standard Java log levels) in increasing verbosity: `SEVERE`, `WARNING`, `INFO`, `CONFIG`, `FINE`, `FINER`, `FINEST`. For daily usage, `INFO` works well.
+
+#### logLocation
+
+The location for log file. Requires access rights. A file, not a directory.
+
+#### mode
+
+Either `encrypt` or `generic`. Encrypt watches for files and directories created in watched directories, encrypts them with Axcrypt using supplied passphrase and moves the encrypted file to a remote directory. If mode is set to `generic`, any commands may be specified for creation, modification and deletion of files and directories.
+
+#### watchDirN
+
+There can be any number of watched directories. These must be indexed by subsequent integers, starting from 1.
+
+#### remoteDirN
+
+There must be exactly same amount of remote directories as there are watched directories. There is one-to-one correspondence between the two. Remote directories with different indices may be the same actual directory. Note that "remote" directory can also be physically a local directory; "remote" only refers to the logical remoteness, a destination, if you will. May be used in commands.
+
+### Encrypt-specific properties
+
+#### passphraseN
+
+The passphrase to be used for encryption for watched directory in index N.
+
+### Generic-mode specific properties
+
+### createFileCommand
+
+Command to be run on file created events.
+
+### modifyFileCommand
+
+Command to be run on file modified events.
+
+### deleteFileCommand
+
+Command to be run on file deleted events.
+
+### createDirCommand
+
+Command to be run on directory created events.
+
+### modifyDirCommand
+
+Command to be run on directory modified events.
+
+### deleteDirCommand
+
+Command to be run on directory deleted events.
+
+In commands you can refer to the created/deleted/modified file/directory with ¤FILE and to the remote for the directory the event happened in with ¤REMOTE. ¤ is used for parsing command string, so if it is required in command, it may need to be escaped or it might not work at all.
 
 # Building & hacking
 
