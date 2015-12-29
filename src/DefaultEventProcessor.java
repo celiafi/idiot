@@ -23,18 +23,24 @@ import java.util.zip.ZipOutputStream;
 
 public class DefaultEventProcessor implements EventProcessor {
 
-	private static final String ALREADY_ENCRYPTED_EXTENSION = "axx";
+	private static String ALREADY_ENCRYPTED_EXTENSION;
 	Idiot autoEncryptor;
 	Map<Path, Path> directories;
+	Map<Path, String> passphrases;
 
 	public DefaultEventProcessor(Idiot autoEncryptor) {
 		this.autoEncryptor = autoEncryptor;
 		this.directories = new HashMap<Path, Path>();
+		this.passphrases = new HashMap<Path, String>();
 	}
 
 	public void initialize() {
-		// TODO Auto-generated method stub
-
+		ALREADY_ENCRYPTED_EXTENSION = autoEncryptor.getConfig().getProperty(
+				"encryptedExtension");
+		Idiot.LOGGER.info("Encrypted extension is \""
+				+ ALREADY_ENCRYPTED_EXTENSION + "\". Files ending with \""
+				+ ALREADY_ENCRYPTED_EXTENSION
+				+ "\" are handled as already encrypted.");
 	}
 
 	public void processEvent(WatchKey key, WatchEvent<?> event) {
@@ -53,6 +59,7 @@ public class DefaultEventProcessor implements EventProcessor {
 
 		Path dir = Idiot.keys.get(key);
 		Path remote = directories.get(Idiot.keys.get(key));
+		String passphrase = passphrases.get(Idiot.keys.get(key));
 		Idiot.LOGGER.fine("Current watched directory: " + dir);
 		Idiot.LOGGER.fine("Current remote directory: " + remote);
 
@@ -69,12 +76,12 @@ public class DefaultEventProcessor implements EventProcessor {
 
 		// If an ordinary file, encrypt
 		else {
-			encryptAndMoveFile(pathToFile, remote);
+			encryptAndMoveFile(pathToFile, remote, passphrase);
 		}
 
 	}
 
-	void encryptAndMoveFile(Path pathToFile, Path remote) {
+	void encryptAndMoveFile(Path pathToFile, Path remote, String passphrase) {
 
 		if (matchExtension(pathToFile, ALREADY_ENCRYPTED_EXTENSION)) {
 			return;
@@ -82,7 +89,7 @@ public class DefaultEventProcessor implements EventProcessor {
 
 		waitUntilPathIsAccessible(pathToFile);
 		try {
-			Path encrypted = encrypt(pathToFile);
+			Path encrypted = encrypt(pathToFile, passphrase);
 			move(encrypted, remote);
 		} catch (IOException e) {
 			Idiot.logExceptionAsSevere(
@@ -214,9 +221,10 @@ public class DefaultEventProcessor implements EventProcessor {
 		return extension;
 	}
 
-	private Path encrypt(Path pathToFile) throws IOException {
+	private Path encrypt(Path pathToFile, String passphrase) throws IOException {
 
-		String commandString = createEncryptionStringForPath(pathToFile);
+		String commandString = createEncryptionStringForPath(pathToFile,
+				passphrase);
 		if (executeExternalCommand(commandString)) {
 			Path encrypted = getEncryptedFilePath(pathToFile);
 			Idiot.LOGGER.info("Encrypted " + encrypted + " succesfully.");
@@ -228,16 +236,33 @@ public class DefaultEventProcessor implements EventProcessor {
 		}
 	}
 
-	private String createEncryptionStringForPath(Path pathToFile) {
-		String encryptionString = "C:\\Program Files\\Axantum\\Axcrypt\\AxCrypt -b 2 -e -k "
-				+ "\""
-				+ autoEncryptor.passphrase
-				+ "\""
-				+ " -z "
-				+ "\""
-				+ pathToFile + "\"";
+	// FIXME: parse config string
+	private String createEncryptionStringForPath(Path pathToFile,
+			String passphrase) {
+//		String encryptionString = "C:\\Program Files\\Axantum\\Axcrypt\\AxCrypt -b 2 -e -k "
+//				+ "\"" + passphrase + "\"" + " -z " + "\"" + pathToFile + "\"";
+		String encryptionString = autoEncryptor.getConfig().getProperty("encryptionString");
+		Idiot.LOGGER.info("Encryption string: " + encryptionString);
+		
+		String commands[] = autoEncryptor.getConfig().getProperty("encryptionString").split("¤");
+
+		for (int i = 0; i < commands.length; i++) {
+			String s = commands[i].trim();
+			if (s.equals("FILE")) {
+				commands[i] = pathToFile.toString().replace("\\", "\\\\");
+			} else if (s.equals("PASSPHRASE")) {
+				commands[i] = passphrase;
+			} else {
+				commands[i] = s;
+			}
+		}
+		
+		encryptionString = String.join("", commands);
+		Idiot.LOGGER.info("Parsed encryption string: " + encryptionString);
 		return encryptionString;
 	}
+
+	// FIXME: terminate axcrypt
 
 	private boolean executeExternalCommand(String command) throws IOException {
 		Process process;
@@ -250,6 +275,7 @@ public class DefaultEventProcessor implements EventProcessor {
 		while ((nextLine = bReader.readLine()) != null) {
 			Idiot.LOGGER.config("Process output: " + nextLine);
 		}
+		// TODO: exitValue initialized to 0 by default?
 		int exitValue = process.exitValue();
 		Idiot.LOGGER.config("Process exited with value: " + exitValue);
 		if (exitValue == 0) {
