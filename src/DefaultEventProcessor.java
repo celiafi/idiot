@@ -23,7 +23,7 @@ import java.util.zip.ZipOutputStream;
 
 public class DefaultEventProcessor implements EventProcessor {
 
-	private static final String ALREADY_ENCRYPTED_EXTENSION = "axx";
+	private static String ALREADY_ENCRYPTED_EXTENSION;
 	Idiot autoEncryptor;
 	Map<Path, Path> directories;
 	Map<Path, String> passphrases;
@@ -35,8 +35,12 @@ public class DefaultEventProcessor implements EventProcessor {
 	}
 
 	public void initialize() {
-		// TODO Auto-generated method stub
-
+		ALREADY_ENCRYPTED_EXTENSION = autoEncryptor.getConfig().getProperty(
+				"encryptedExtension");
+		Idiot.LOGGER.info("Encrypted extension is \""
+				+ ALREADY_ENCRYPTED_EXTENSION + "\". Files ending with \""
+				+ ALREADY_ENCRYPTED_EXTENSION
+				+ "\" are handled as already encrypted.");
 	}
 
 	public void processEvent(WatchKey key, WatchEvent<?> event) {
@@ -219,7 +223,8 @@ public class DefaultEventProcessor implements EventProcessor {
 
 	private Path encrypt(Path pathToFile, String passphrase) throws IOException {
 
-		String commandString = createEncryptionStringForPath(pathToFile, passphrase);
+		String commandString = createEncryptionStringForPath(pathToFile,
+				passphrase);
 		if (executeExternalCommand(commandString)) {
 			Path encrypted = getEncryptedFilePath(pathToFile);
 			Idiot.LOGGER.info("Encrypted " + encrypted + " succesfully.");
@@ -230,20 +235,16 @@ public class DefaultEventProcessor implements EventProcessor {
 			throw (new IOException());
 		}
 	}
-	
+
 	// FIXME: multiple keys for directory pairs
 	// FIXME: move config string to properties
-	private String createEncryptionStringForPath(Path pathToFile, String passphrase) {
+	private String createEncryptionStringForPath(Path pathToFile,
+			String passphrase) {
 		String encryptionString = "C:\\Program Files\\Axantum\\Axcrypt\\AxCrypt -b 2 -e -k "
-				+ "\""
-				+ passphrase
-				+ "\""
-				+ " -z "
-				+ "\""
-				+ pathToFile + "\"";
+				+ "\"" + passphrase + "\"" + " -z " + "\"" + pathToFile + "\"";
 		return encryptionString;
 	}
-	
+
 	// FIXME: terminate axcrypt
 
 	private boolean executeExternalCommand(String command) throws IOException {
