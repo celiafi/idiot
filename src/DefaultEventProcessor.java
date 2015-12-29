@@ -236,13 +236,29 @@ public class DefaultEventProcessor implements EventProcessor {
 		}
 	}
 
-	// FIXME: move config string to properties
+	// FIXME: parse config string
 	private String createEncryptionStringForPath(Path pathToFile,
 			String passphrase) {
 //		String encryptionString = "C:\\Program Files\\Axantum\\Axcrypt\\AxCrypt -b 2 -e -k "
 //				+ "\"" + passphrase + "\"" + " -z " + "\"" + pathToFile + "\"";
 		String encryptionString = autoEncryptor.getConfig().getProperty("encryptionString");
 		Idiot.LOGGER.info("Encryption string: " + encryptionString);
+		
+		String commands[] = autoEncryptor.getConfig().getProperty("encryptionString").split("¤");
+
+		for (int i = 0; i < commands.length; i++) {
+			String s = commands[i].trim();
+			if (s.equals("FILE")) {
+				commands[i] = pathToFile.toString().replace("\\", "\\\\");
+			} else if (s.equals("PASSPHRASE")) {
+				commands[i] = passphrase;
+			} else {
+				commands[i] = s;
+			}
+		}
+		
+		encryptionString = String.join("", commands);
+		Idiot.LOGGER.info("Parsed encryption string: " + encryptionString);
 		return encryptionString;
 	}
 
