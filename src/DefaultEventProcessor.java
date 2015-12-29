@@ -24,18 +24,18 @@ import java.util.zip.ZipOutputStream;
 public class DefaultEventProcessor implements EventProcessor {
 
 	private static String ALREADY_ENCRYPTED_EXTENSION;
-	Idiot autoEncryptor;
+	Idiot idiot;
 	Map<Path, Path> directories;
 	Map<Path, String> passphrases;
 
-	public DefaultEventProcessor(Idiot autoEncryptor) {
-		this.autoEncryptor = autoEncryptor;
+	public DefaultEventProcessor(Idiot idiot) {
+		this.idiot = idiot;
 		this.directories = new HashMap<Path, Path>();
 		this.passphrases = new HashMap<Path, String>();
 	}
 
 	public void initialize() {
-		ALREADY_ENCRYPTED_EXTENSION = autoEncryptor.getConfig().getProperty(
+		ALREADY_ENCRYPTED_EXTENSION = idiot.getConfig().getProperty(
 				"encryptedExtension");
 		Idiot.LOGGER.info("Encrypted extension is \""
 				+ ALREADY_ENCRYPTED_EXTENSION + "\". Files ending with \""
@@ -236,15 +236,13 @@ public class DefaultEventProcessor implements EventProcessor {
 		}
 	}
 
-	// FIXME: parse config string
+
 	private String createEncryptionStringForPath(Path pathToFile,
 			String passphrase) {
-//		String encryptionString = "C:\\Program Files\\Axantum\\Axcrypt\\AxCrypt -b 2 -e -k "
-//				+ "\"" + passphrase + "\"" + " -z " + "\"" + pathToFile + "\"";
-		String encryptionString = autoEncryptor.getConfig().getProperty("encryptionString");
+		String encryptionString = idiot.getConfig().getProperty("encryptionString");
 		Idiot.LOGGER.info("Encryption string: " + encryptionString);
 		
-		String commands[] = autoEncryptor.getConfig().getProperty("encryptionString").split("¤");
+		String commands[] = idiot.getConfig().getProperty("encryptionString").split("¤");
 
 		for (int i = 0; i < commands.length; i++) {
 			String s = commands[i].trim();
@@ -262,8 +260,7 @@ public class DefaultEventProcessor implements EventProcessor {
 		return encryptionString;
 	}
 
-	// FIXME: terminate axcrypt
-
+	// FIXME: terminate axcrypt after a timeout period?
 	private boolean executeExternalCommand(String command) throws IOException {
 		Process process;
 
@@ -275,7 +272,6 @@ public class DefaultEventProcessor implements EventProcessor {
 		while ((nextLine = bReader.readLine()) != null) {
 			Idiot.LOGGER.config("Process output: " + nextLine);
 		}
-		// TODO: exitValue initialized to 0 by default?
 		int exitValue = process.exitValue();
 		Idiot.LOGGER.config("Process exited with value: " + exitValue);
 		if (exitValue == 0) {

@@ -84,7 +84,7 @@ Command to be run on directory modified events.
 
 Command to be run on directory deleted events.
 
-In commands you can refer to the created/deleted/modified file/directory with ¤FILE and to the remote for the directory the event happened in with ¤REMOTE. ¤ is used for parsing command string, so if it is required in command, it may need to be escaped or it might not work at all.
+In commands you can refer to the created/deleted/modified file/directory with ¤FILE¤ and to the remote for the directory the event happened in with ¤REMOTE¤. ¤ is used for parsing command string, so if it is required in command, it may need to be escaped or it might not work at all.
 
 # Building & hacking
 
@@ -94,7 +94,7 @@ The codebase contains some unconventional solutions affixed to each other with b
 
 # Known bugs
 
-No known bugs.
+Axcrypt seems to launch a background process that's inaccessible from Java. The process seems to linger on until manually killed. During testing - even with multiple instances and multiple passes - only one inaccessible process was launched, though.
 
 # License
 
