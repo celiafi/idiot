@@ -26,10 +26,12 @@ public class DefaultEventProcessor implements EventProcessor {
 	private static final String ALREADY_ENCRYPTED_EXTENSION = "axx";
 	Idiot autoEncryptor;
 	Map<Path, Path> directories;
+	Map<Path, String> passphrases;
 
 	public DefaultEventProcessor(Idiot autoEncryptor) {
 		this.autoEncryptor = autoEncryptor;
 		this.directories = new HashMap<Path, Path>();
+		this.passphrases = new HashMap<Path, String>();
 	}
 
 	public void initialize() {
@@ -53,6 +55,7 @@ public class DefaultEventProcessor implements EventProcessor {
 
 		Path dir = Idiot.keys.get(key);
 		Path remote = directories.get(Idiot.keys.get(key));
+		String passphrase = passphrases.get(Idiot.keys.get(key));
 		Idiot.LOGGER.fine("Current watched directory: " + dir);
 		Idiot.LOGGER.fine("Current remote directory: " + remote);
 
@@ -69,12 +72,12 @@ public class DefaultEventProcessor implements EventProcessor {
 
 		// If an ordinary file, encrypt
 		else {
-			encryptAndMoveFile(pathToFile, remote);
+			encryptAndMoveFile(pathToFile, remote, passphrase);
 		}
 
 	}
 
-	void encryptAndMoveFile(Path pathToFile, Path remote) {
+	void encryptAndMoveFile(Path pathToFile, Path remote, String passphrase) {
 
 		if (matchExtension(pathToFile, ALREADY_ENCRYPTED_EXTENSION)) {
 			return;
@@ -82,7 +85,7 @@ public class DefaultEventProcessor implements EventProcessor {
 
 		waitUntilPathIsAccessible(pathToFile);
 		try {
-			Path encrypted = encrypt(pathToFile);
+			Path encrypted = encrypt(pathToFile, passphrase);
 			move(encrypted, remote);
 		} catch (IOException e) {
 			Idiot.logExceptionAsSevere(
@@ -214,9 +217,9 @@ public class DefaultEventProcessor implements EventProcessor {
 		return extension;
 	}
 
-	private Path encrypt(Path pathToFile) throws IOException {
+	private Path encrypt(Path pathToFile, String passphrase) throws IOException {
 
-		String commandString = createEncryptionStringForPath(pathToFile);
+		String commandString = createEncryptionStringForPath(pathToFile, passphrase);
 		if (executeExternalCommand(commandString)) {
 			Path encrypted = getEncryptedFilePath(pathToFile);
 			Idiot.LOGGER.info("Encrypted " + encrypted + " succesfully.");
@@ -227,17 +230,21 @@ public class DefaultEventProcessor implements EventProcessor {
 			throw (new IOException());
 		}
 	}
-
-	private String createEncryptionStringForPath(Path pathToFile) {
+	
+	// FIXME: multiple keys for directory pairs
+	// FIXME: move config string to properties
+	private String createEncryptionStringForPath(Path pathToFile, String passphrase) {
 		String encryptionString = "C:\\Program Files\\Axantum\\Axcrypt\\AxCrypt -b 2 -e -k "
 				+ "\""
-				+ autoEncryptor.passphrase
+				+ passphrase
 				+ "\""
 				+ " -z "
 				+ "\""
 				+ pathToFile + "\"";
 		return encryptionString;
 	}
+	
+	// FIXME: terminate axcrypt
 
 	private boolean executeExternalCommand(String command) throws IOException {
 		Process process;

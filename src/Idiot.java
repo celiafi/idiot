@@ -101,7 +101,8 @@ public class Idiot {
 		while ((p = getConfig().getProperty("watchDir" + i)) != null) {
 			Path watchDir = Paths.get(p);
 			if (getConfig().getProperty("remoteDir" + i) != null) {
-				Path remoteDir = Paths.get(getConfig().getProperty("remoteDir" + i));
+				Path remoteDir = Paths.get(getConfig().getProperty(
+						"remoteDir" + i));
 				LOGGER.info("Watching " + watchDir + ", - Remote is "
 						+ remoteDir);
 
@@ -116,11 +117,29 @@ public class Idiot {
 						gep.directories.put(watchDir, remoteDir);
 					}
 				}
+			} else {
+				LOGGER.severe("The amount of remote directories is not equivalent "
+						+ "to the amount of watched directories! "
+						+ "Please check your configuration file.");
+				break;
+			}
+			if (getConfig().getProperty("passphrase" + i) != null) {
+				String passphrase = getConfig().getProperty("passphrase" + i);
+				LOGGER.info("Watching " + watchDir + ", - Passphrase is "
+						+ passphrase);
+
+				for (int j = 0; j < eventProcessors.size(); j++) {
+					EventProcessor ep = eventProcessors.get(j);
+					if (ep instanceof DefaultEventProcessor) {
+						DefaultEventProcessor dep = (DefaultEventProcessor) ep;
+						dep.passphrases.put(watchDir, passphrase);
+					}
+				}
 
 				registerDirectory(watchDir);
 				i++;
 			} else {
-				LOGGER.severe("The amount of remote directories is not equivalent "
+				LOGGER.severe("The amount of passphrases is not equivalent "
 						+ "to the amount of watched directories! "
 						+ "Please check your configuration file.");
 				break;
