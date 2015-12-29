@@ -6,7 +6,7 @@ IDIOT (Intelligent Directory Input-Output Transformer) is a cross-platform direc
 
 Idiot requires Java 7. That provided, download the `idiot.jar` and `idiot.properties` files and put them wherever you want. The core of Idiot itself is cross-platform ~~and should work on both Windows and *nix.~~ but due to some hard-coded path separators won't work on *nix.
 
-For encryption mode, however, Axcrypt is Windows-only and hence encrypt mode won't work on *nix (see Configuration). Axcrypt installation is required (but not checked!) for encryption mode.
+For encryption mode's default behaviour, however, Axcrypt is Windows-only and hence encrypt mode won't work on *nix (see Configuration). Axcrypt installation is required (but not checked!) for encryption mode.
 
 # Usage
 
@@ -53,6 +53,10 @@ The passphrase to be used for encryption for watched directory in index N.
 #### encryptedExtension
 
 The extension for already encrypted files. This is dependent on encryption software. For Axcrypt, default is `axx`.
+
+#### encryptionString
+
+The command string used for encryption. Passphrases and file names can be referenced with ¤PASSPHRASE¤ and ¤FILENAME¤.
 
 ### Generic-mode specific properties
 
