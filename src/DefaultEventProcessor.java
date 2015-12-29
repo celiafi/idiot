@@ -236,12 +236,13 @@ public class DefaultEventProcessor implements EventProcessor {
 		}
 	}
 
-	// FIXME: multiple keys for directory pairs
 	// FIXME: move config string to properties
 	private String createEncryptionStringForPath(Path pathToFile,
 			String passphrase) {
-		String encryptionString = "C:\\Program Files\\Axantum\\Axcrypt\\AxCrypt -b 2 -e -k "
-				+ "\"" + passphrase + "\"" + " -z " + "\"" + pathToFile + "\"";
+//		String encryptionString = "C:\\Program Files\\Axantum\\Axcrypt\\AxCrypt -b 2 -e -k "
+//				+ "\"" + passphrase + "\"" + " -z " + "\"" + pathToFile + "\"";
+		String encryptionString = autoEncryptor.getConfig().getProperty("encryptionString");
+		Idiot.LOGGER.info("Encryption string: " + encryptionString);
 		return encryptionString;
 	}
 
