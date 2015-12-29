@@ -50,6 +50,10 @@ There must be exactly same amount of remote directories as there are watched dir
 
 The passphrase to be used for encryption for watched directory in index N.
 
+#### encryptedExtension
+
+The extension for already encrypted files. This is dependent on encryption software. For Axcrypt, default is `axx`.
+
 ### Generic-mode specific properties
 
 ### createFileCommand
