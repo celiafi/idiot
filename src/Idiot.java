@@ -82,7 +82,8 @@ public class Idiot {
 		this.config = new Properties();
 		InputStream in;
 
-		in = this.getClass().getResourceAsStream("idiot.properties");
+		in = this.getClass().getResourceAsStream("/idiot.properties");
+
 
 		getConfig().load(in);
 		in.close();
